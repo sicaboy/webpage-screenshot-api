@@ -21,7 +21,13 @@ A lightweight microservice to generate screenshots of webpages using a headless 
     cd webpage-screenshot-api
     ```
 
-2. **Start the services**:
+2. **Configure Environment**:
+    copy `.env.example` to `.env` and set your `API_SECRET`.
+    ```bash
+    cp .env.example .env
+    ```
+
+3. **Start the services**:
     ```bash
     docker compose up --build -d
     ```
@@ -32,11 +38,16 @@ This will start two containers:
 
 ## API Documentation
 
+### Authentication
+
+Secure the API by setting an `API_SECRET` environment variable in your `.env` file. When set, all requests must include the `X-API-Secret` header.
+
 ### Take a Screenshot
 **Endpoint**: `POST /screenshot`
 
 **Request Headers**:
 - `Content-Type: application/json`
+- `X-API-Secret: <your_api_secret>` (Required if `API_SECRET` env var is set)
 
 **Request Body**:
 
@@ -67,6 +78,7 @@ Returns a JSON object containing the Base64 encoded screenshot.
 ```bash
 curl -X POST http://localhost:8080/screenshot \
      -H "Content-Type: application/json" \
+     -H "X-API-Secret: my_secure_secret_123" \
      -d '{"url": "https://google.com"}'
 ```
 
@@ -74,6 +86,7 @@ curl -X POST http://localhost:8080/screenshot \
 ```bash
 curl -X POST http://localhost:8080/screenshot \
      -H "Content-Type: application/json" \
+     -H "X-API-Secret: my_secure_secret_123" \
      -d '{
            "url": "https://news.ycombinator.com", 
            "device": "iPhone 13 Pro",

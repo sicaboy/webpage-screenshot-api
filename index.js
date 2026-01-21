@@ -7,8 +7,18 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const BROWSER_WS_ENDPOINT = process.env.BROWSER_WS_ENDPOINT || 'ws://browser:3000';
+const API_SECRET = process.env.API_SECRET;
 
 app.post('/screenshot', async (req, res) => {
+    // 0. Security Check
+    if (API_SECRET) {
+        // req.get() is case-insensitive
+        const clientSecret = req.get('X-API-Secret');
+        if (clientSecret !== API_SECRET) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid or missing API secret' });
+        }
+    }
+
     const {
         url,
         width,

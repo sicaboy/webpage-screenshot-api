@@ -9,6 +9,8 @@ services:
       - "8080:3000"
     networks:
       - caddy
+    env_file:
+      - .env
     environment:
       - BROWSER_WS_ENDPOINT=ws://screenshot-browser:3000
     depends_on:
