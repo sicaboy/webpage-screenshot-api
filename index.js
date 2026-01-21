@@ -1,5 +1,6 @@
 const express = require('express');
 const puppeteer = require('puppeteer-core');
+const { KnownDevices } = require('puppeteer-core');
 
 const app = express();
 app.use(express.json());
@@ -8,7 +9,16 @@ const PORT = process.env.PORT || 3000;
 const BROWSER_WS_ENDPOINT = process.env.BROWSER_WS_ENDPOINT || 'ws://browser:3000';
 
 app.post('/screenshot', async (req, res) => {
-    const { url } = req.body;
+    const {
+        url,
+        width,
+        height,
+        device,
+        fullPage,
+        darkMode,
+        delay,
+        waitForSelector
+    } = req.body;
 
     if (!url) {
         return res.status(400).json({ error: 'URL is required' });
@@ -23,19 +33,51 @@ app.post('/screenshot', async (req, res) => {
 
         const page = await browser.newPage();
 
-        // Set viewport to a reasonable default
-        await page.setViewport({ width: 1280, height: 800 });
+        // 1. Device Emulation or Manual Viewport
+        if (device && KnownDevices[device]) {
+            console.log(`Emulating device: ${device}`);
+            await page.emulate(KnownDevices[device]);
+        } else {
+            const viewport = {
+                width: parseInt(width) || 1280,
+                height: parseInt(height) || 800
+            };
+            await page.setViewport(viewport);
+        }
+
+        // 2. Dark Mode
+        if (darkMode) {
+            console.log('Enabling Dark Mode');
+            await page.emulateMediaFeatures([
+                { name: 'prefers-color-scheme', value: 'dark' }
+            ]);
+        }
 
         console.log(`Navigating to ${url}...`);
         await page.goto(url, {
-            waitUntil: 'networkidle0', // Wait until network is idle (no connections for at least 500 ms)
-            timeout: 30000 // 30 seconds timeout
+            waitUntil: 'networkidle0',
+            timeout: 30000
         });
+
+        // 3. Post-load Waits
+        if (waitForSelector) {
+            console.log(`Waiting for selector: ${waitForSelector}`);
+            try {
+                await page.waitForSelector(waitForSelector, { timeout: 10000 });
+            } catch (e) {
+                console.warn(`Timeout waiting for selector: ${waitForSelector}`);
+            }
+        }
+
+        if (delay) {
+            console.log(`Waiting for ${delay}ms delay...`);
+            await new Promise(r => setTimeout(r, parseInt(delay)));
+        }
 
         console.log('Taking screenshot...');
         const screenshot = await page.screenshot({
             encoding: 'base64',
-            fullPage: false // Change to true if full page is needed, maybe make it configurable?
+            fullPage: !!fullPage
         });
 
         await page.close();
