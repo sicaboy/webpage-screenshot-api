@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  screenshot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8080:3000"
+    networks:
+      - caddy
+    environment:
+      - BROWSER_WS_ENDPOINT=ws://screenshot-browser:3000
+    depends_on:
+      - screenshot-browser
+
+  screenshot-browser:
+    image: ghcr.io/browserless/chromium
+    networks:
+      - caddy
+    environment:
+      - "CONNECTION_TIMEOUT=60000"
+
+networks:
+  caddy:
+    external: true

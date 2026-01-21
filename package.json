@@ -1,0 +1,13 @@
+{
+    "name": "webpage-screenshot-api",
+    "version": "1.0.0",
+    "description": "API to generate webpage screenshots",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "express": "^4.21.0",
+        "puppeteer-core": "^23.4.0"
+    }
+}
