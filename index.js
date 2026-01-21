@@ -9,6 +9,76 @@ const PORT = process.env.PORT || 3000;
 const BROWSER_WS_ENDPOINT = process.env.BROWSER_WS_ENDPOINT || 'ws://browser:3000';
 const API_SECRET = process.env.API_SECRET;
 
+app.get('/', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Webpage Screenshot API</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    background-color: #0f172a;
+                    color: #f8fafc;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    margin: 0;
+                    text-align: center;
+                }
+                .container {
+                    padding: 2rem;
+                    max-width: 600px;
+                }
+                h1 {
+                    font-size: 2.5rem;
+                    margin-bottom: 1rem;
+                    background: linear-gradient(to right, #60a5fa, #a855f7);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                p {
+                    font-size: 1.1rem;
+                    color: #94a3b8;
+                    margin-bottom: 2rem;
+                    line-height: 1.6;
+                }
+                .btn {
+                    display: inline-block;
+                    padding: 0.75rem 1.5rem;
+                    background-color: #3b82f6;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 9999px;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                }
+                .btn:hover {
+                    background-color: #2563eb;
+                    transform: translateY(-1px);
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Webpage Screenshot API</h1>
+                <p>
+                    A high-performance microservice for generating pixel-perfect screenshots of any webpage.
+                    Powered by generic headless browsers and orchestrated via Docker.
+                </p>
+                <a href="https://github.com/sicaboy/webpage-screenshot-api" class="btn">View Documentation & Usage</a>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
 app.post('/screenshot', async (req, res) => {
     // 0. Security Check
     if (API_SECRET) {
