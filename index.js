@@ -213,7 +213,7 @@ app.get('/', (req, res) => {
                                     <option value="iPhone 12">iPhone 12</option>
                                     <option value="iPhone 12 Pro">iPhone 12 Pro</option>
                                     <option value="iPhone SE">iPhone SE</option>
-                                    <option value="iPad Pro">iPad Pro</option>
+                                    <option value="iPad Pro" selected>iPad Pro</option>
                                     <option value="iPad Mini">iPad Mini</option>
                                     <option value="iPad">iPad</option>
                                     <option value="Galaxy S9+">Galaxy S9+</option>
@@ -387,7 +387,7 @@ app.post('/screenshot', async (req, res) => {
         }
     }
 
-    const {
+    let {
         url,
         width,
         height,
@@ -400,6 +400,14 @@ app.post('/screenshot', async (req, res) => {
 
     if (!url) {
         return res.status(400).json({ error: 'URL is required' });
+    }
+
+    // If user doesn't specify device, width, or height, default to iPad Pro
+    const hasCustomSize = width || height;
+    const hasDeviceParam = device !== undefined;
+    
+    if (!hasDeviceParam && !hasCustomSize) {
+        device = 'iPad Pro';
     }
 
     let browser;
@@ -416,12 +424,141 @@ app.post('/screenshot', async (req, res) => {
             console.log(`Emulating device: ${device}`);
             await page.emulate(KnownDevices[device]);
         } else {
+            // Set realistic user agent for custom sizes
             const viewport = {
                 width: parseInt(width) || 1280,
-                height: parseInt(height) || 800
+                height: parseInt(height) || 800,
+                deviceScaleFactor: 2,
+                hasTouch: false,
+                isLandscape: false,
+                isMobile: false
             };
             await page.setViewport(viewport);
+            
+            // Set realistic desktop browser user agent
+            await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
         }
+
+        // Anti-bot detection: Remove webdriver flags and set realistic properties
+        await page.evaluateOnNewDocument(() => {
+            // Remove webdriver property
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => false,
+            });
+
+            // Override the plugins property to add realistic plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [
+                    {
+                        0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format"},
+                        description: "Portable Document Format",
+                        filename: "internal-pdf-viewer",
+                        length: 1,
+                        name: "Chrome PDF Plugin"
+                    },
+                    {
+                        0: {type: "application/pdf", suffixes: "pdf", description: ""},
+                        description: "",
+                        filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                        length: 1,
+                        name: "Chrome PDF Viewer"
+                    },
+                    {
+                        0: {type: "application/x-nacl"},
+                        description: "Native Client Executable",
+                        filename: "internal-nacl-plugin",
+                        length: 2,
+                        name: "Native Client"
+                    }
+                ],
+            });
+
+            // Override languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['en-US', 'en'],
+            });
+
+            // Chrome runtime
+            window.chrome = {
+                runtime: {},
+                loadTimes: function() {},
+                csi: function() {},
+                app: {}
+            };
+
+            // Permissions
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+
+            // Override hardware concurrency
+            Object.defineProperty(navigator, 'hardwareConcurrency', {
+                get: () => 8,
+            });
+
+            // Override device memory
+            Object.defineProperty(navigator, 'deviceMemory', {
+                get: () => 8,
+            });
+
+            // Override platform
+            Object.defineProperty(navigator, 'platform', {
+                get: () => 'MacIntel',
+            });
+
+            // Mock screen properties
+            Object.defineProperty(screen, 'availWidth', {
+                get: () => 1920,
+            });
+            Object.defineProperty(screen, 'availHeight', {
+                get: () => 1080,
+            });
+            Object.defineProperty(screen, 'width', {
+                get: () => 1920,
+            });
+            Object.defineProperty(screen, 'height', {
+                get: () => 1080,
+            });
+
+            // WebGL vendor and renderer
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                if (parameter === 37445) {
+                    return 'Intel Inc.';
+                }
+                if (parameter === 37446) {
+                    return 'Intel Iris OpenGL Engine';
+                }
+                return getParameter.apply(this, [parameter]);
+            };
+
+            // Add realistic fonts
+            const originalFonts = Object.getOwnPropertyDescriptor(Document.prototype, 'fonts');
+            if (originalFonts) {
+                Object.defineProperty(Document.prototype, 'fonts', {
+                    get: function() {
+                        const fonts = originalFonts.get.call(this);
+                        // Mock common system fonts
+                        return fonts;
+                    }
+                });
+            }
+        });
+
+        // Set extra HTTP headers to mimic real browser
+        await page.setExtraHTTPHeaders({
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1'
+        });
 
         // 2. Dark Mode
         if (darkMode) {
